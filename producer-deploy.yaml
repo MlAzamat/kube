@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: producer-dep
+  labels:
+    app: marmarks-dep
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: marmarks-dep
+  template:
+    metadata:
+      labels:
+        app: marmarks-dep
+    spec:
+      containers:
+        - name: producer-dep
+          image: "marmarks/producer:0.2"
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: producer-config-map
+            - secretRef:
+                name: producer-secrets
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 3
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: producer-config-map
+  labels:
+    app: marmarks-dep
+data:
+  SERVER_PORT: "8080"
+  SPRING_PROFILES_ACTIVE: "dev"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgresql-dev:5432/postgres"
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: producer-secrets
+  labels:
+    app: marmarks-dep
+type: Opaque
+stringData:
+  SPRING_DATASOURCE_USERNAME: "postgres"
+  SPRING_DATASOURCE_PASSWORD: "pgpass"
